@@ -1478,7 +1478,7 @@ public class JSONArray implements Iterable<Object> {
 
                 for (int i = 0; i < length; i += 1) {
                     if (commanate) {
-                        writer.write(',');
+                        writer.write(GetSeparator(i));
                     }
                     if (indentFactor > 0) {
                         writer.write('\n');
@@ -1502,6 +1502,10 @@ public class JSONArray implements Iterable<Object> {
         } catch (IOException e) {
             throw new JSONException(e);
         }
+    }
+
+    protected String GetSeparator(int currentIndex) {
+        return ",";
     }
 
     /**
