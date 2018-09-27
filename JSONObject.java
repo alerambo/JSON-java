@@ -1981,7 +1981,6 @@ public class JSONObject {
             return w;
         }
 
-        char b;
         char c = 0;
         String hhhh;
         int i;
@@ -1989,7 +1988,6 @@ public class JSONObject {
 
         w.write('"');
         for (i = 0; i < len; i += 1) {
-            b = c;
             c = string.charAt(i);
             switch (c) {
             case '\\':
@@ -1998,10 +1996,13 @@ public class JSONObject {
                 w.write(c);
                 break;
             case '/':
-                if (b == '<') {
-                    w.write('\\');
-                }
-                w.write(c);
+                w.write("\\u002f");
+                break;
+            case '<' :
+                w.write("\\u003c");
+                break;
+            case '>' :
+                w.write("\\u003e");
                 break;
             case '\b':
                 w.write("\\b");
