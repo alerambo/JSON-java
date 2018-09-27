@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.ResourceBundle;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * A JSONObject is an unordered collection of name/value pairs. Its external
@@ -922,7 +923,16 @@ public class JSONObject {
      * @return An iterator of the keys.
      */
     public Iterator<String> keys() {
+        return keys(false);
+    }
+    public Iterator keys(boolean keysOdered) {
+      if (keysOdered) {
+        TreeSet t = new TreeSet();
+        t.addAll(this.keySet());
+        return t.iterator();
+      } else {
         return this.keySet().iterator();
+      }
     }
 
     /**
@@ -951,6 +961,16 @@ public class JSONObject {
      */
     protected Set<Entry<String, Object>> entrySet() {
         return this.map.entrySet();
+    }
+
+    protected Set<Entry<String, Object>> entrySet(boolean orderedKeys)  {
+        if (orderedKeys) {
+            TreeMap<String, Integer> sorted = new TreeMap<>(); 
+            sorted.addAll(map);
+            return sorted.entrySet();
+        } else {
+            return this.entrySet();
+        }
     }
 
     /**
@@ -2260,8 +2280,11 @@ public class JSONObject {
      */
     @Override
     public String toString() {
+        return toString(false);
+    }
+    public String toString(boolean keysOdered) {
         try {
-            return this.toString(0);
+            return this.toString(0, keysOdered);
         } catch (Exception e) {
             return null;
         }
@@ -2294,9 +2317,12 @@ public class JSONObject {
      *             If the object contains an invalid number.
      */
     public String toString(int indentFactor) throws JSONException {
+        return toString(indentFactor, false);
+    }
+    public String toString(int indentFactor, boolean keysOdered) throws JSONException {
         StringWriter w = new StringWriter();
         synchronized (w.getBuffer()) {
-            return this.write(w, indentFactor, 0).toString();
+            return this.write(w, indentFactor, 0, keysOdered).toString();
         }
     }
 
@@ -2396,11 +2422,18 @@ public class JSONObject {
      * @throws JSONException
      */
     public Writer write(Writer writer) throws JSONException {
-        return this.write(writer, 0, 0);
+        return this.write(writer, false);
+    }
+    public Writer write(Writer writer, boolean keysOdered) throws JSONException {
+        return this.write(writer, 0, 0, keysOdered);
     }
 
     static final Writer writeValue(Writer writer, Object value,
             int indentFactor, int indent) throws JSONException, IOException {
+                return writeValue(writer,value,indentFactor,indent, false);
+            }
+    static final Writer writeValue(Writer writer, Object value,
+            int indentFactor, int indent,boolean keysOdered) throws JSONException, IOException {
         if (value == null || value.equals(null)) {
             writer.write("null");
         } else if (value instanceof JSONString) {
@@ -2430,17 +2463,17 @@ public class JSONObject {
         } else if (value instanceof Enum<?>) {
             writer.write(quote(((Enum<?>)value).name()));
         } else if (value instanceof JSONObject) {
-            ((JSONObject) value).write(writer, indentFactor, indent);
+            ((JSONObject) value).write(writer, indentFactor, indent, keysOdered);
         } else if (value instanceof JSONArray) {
-            ((JSONArray) value).write(writer, indentFactor, indent);
+            ((JSONArray) value).write(writer, indentFactor, indent, keysOdered);
         } else if (value instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) value;
-            new JSONObject(map).write(writer, indentFactor, indent);
+            new JSONObject(map).write(writer, indentFactor, indent, keysOdered);
         } else if (value instanceof Collection) {
             Collection<?> coll = (Collection<?>) value;
-            new JSONArray(coll).write(writer, indentFactor, indent);
+            new JSONArray(coll).write(writer, indentFactor, indent, keysOdered);
         } else if (value.getClass().isArray()) {
-            new JSONArray(value).write(writer, indentFactor, indent);
+            new JSONArray(value).write(writer, indentFactor, indent, keysOdered);
         } else {
             quote(value.toString(), writer);
         }
@@ -2481,6 +2514,10 @@ public class JSONObject {
      */
     public Writer write(Writer writer, int indentFactor, int indent)
             throws JSONException {
+        return write(writer, indentFactor, indent, false);
+    }     
+    Writer write(Writer writer, int indentFactor, int indent, boolean keysOdered)
+            throws JSONException {
         try {
             boolean commanate = false;
             final int length = this.length();
@@ -2495,7 +2532,7 @@ public class JSONObject {
                     writer.write(' ');
                 }
                 try{
-                    writeValue(writer, entry.getValue(), indentFactor, indent);
+                    writeValue(writer, entry.getValue(), indentFactor, indent, keysOdered);
                 } catch (Exception e) {
                     throw new JSONException("Unable to write JSONObject value for key: " + key, e);
                 }
@@ -2516,7 +2553,7 @@ public class JSONObject {
                         writer.write(' ');
                     }
                     try {
-                        writeValue(writer, entry.getValue(), indentFactor, newindent);
+                        writeValue(writer, entry.getValue(), indentFactor, newindent, keysOdered);
                     } catch (Exception e) {
                         throw new JSONException("Unable to write JSONObject value for key: " + key, e);
                     }

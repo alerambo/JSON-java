@@ -1376,8 +1376,11 @@ public class JSONArray implements Iterable<Object> {
      */
     @Override
     public String toString() {
+        return toString(false);
+    }
+    public String toString(boolean keysOdered) {
         try {
-            return this.toString(0);
+            return this.toString(0, keysOdered);
         } catch (Exception e) {
             return null;
         }
@@ -1411,9 +1414,12 @@ public class JSONArray implements Iterable<Object> {
      * @throws JSONException
      */
     public String toString(int indentFactor) throws JSONException {
+        return toString(indentFactor, false);
+    }
+    public String toString(int indentFactor,boolean keysOdered) throws JSONException {
         StringWriter sw = new StringWriter();
         synchronized (sw.getBuffer()) {
-            return this.write(sw, indentFactor, 0).toString();
+            return this.write(sw, indentFactor, 0, keysOdered).toString();
         }
     }
 
@@ -1428,7 +1434,10 @@ public class JSONArray implements Iterable<Object> {
      * @throws JSONException
      */
     public Writer write(Writer writer) throws JSONException {
-        return this.write(writer, 0, 0);
+        return this.write(writer, false);
+    }
+    public Writer write(Writer writer, boolean keysOdered) throws JSONException {
+        return this.write(writer, 0, 0, keysOdered);
     }
 
     /**
@@ -1461,6 +1470,10 @@ public class JSONArray implements Iterable<Object> {
      */
     public Writer write(Writer writer, int indentFactor, int indent)
             throws JSONException {
+                return write(writer, indentFactor, indent, false);
+            }
+            protected Writer write(Writer writer, int indentFactor, int indent, boolean keysOdered)
+                    throws JSONException {
         try {
             boolean commanate = false;
             int length = this.length();
@@ -1469,7 +1482,7 @@ public class JSONArray implements Iterable<Object> {
             if (length == 1) {
                 try {
                     JSONObject.writeValue(writer, this.myArrayList.get(0),
-                            indentFactor, indent);
+                            indentFactor, indent, keysOdered);
                 } catch (Exception e) {
                     throw new JSONException("Unable to write JSONArray value at index: 0", e);
                 }
@@ -1486,7 +1499,7 @@ public class JSONArray implements Iterable<Object> {
                     JSONObject.indent(writer, newindent);
                     try {
                         JSONObject.writeValue(writer, this.myArrayList.get(i),
-                                indentFactor, newindent);
+                                indentFactor, newindent, keysOdered);
                     } catch (Exception e) {
                         throw new JSONException("Unable to write JSONArray value at index: " + i, e);
                     }
