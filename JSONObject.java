@@ -928,7 +928,7 @@ public class JSONObject {
     }
     public Iterator<String> keys(boolean keysOdered) {
       if (keysOdered) {
-        TreeSet<String> t = new TreeSet<>();
+        TreeSet<String> t = new TreeSet<String>();
         t.addAll(this.keySet());
         return t.iterator();
       } else {
@@ -966,7 +966,7 @@ public class JSONObject {
 
     protected Set<Entry<String, Object>> entrySet(boolean orderedKeys)  {
         if (orderedKeys) {
-            TreeMap<String, Object> sorted = new TreeMap<>(); 
+            TreeMap<String, Object> sorted = new TreeMap<String, Object>(); 
             sorted.putAll(this.map);
             return sorted.entrySet();
         } else {
