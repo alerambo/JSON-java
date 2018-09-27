@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.ResourceBundle;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.TreeMap;
 
 /**
@@ -925,9 +926,9 @@ public class JSONObject {
     public Iterator<String> keys() {
         return keys(false);
     }
-    public Iterator keys(boolean keysOdered) {
+    public Iterator<String> keys(boolean keysOdered) {
       if (keysOdered) {
-        TreeSet t = new TreeSet();
+        TreeSet<String> t = new TreeSet<>();
         t.addAll(this.keySet());
         return t.iterator();
       } else {
@@ -965,8 +966,8 @@ public class JSONObject {
 
     protected Set<Entry<String, Object>> entrySet(boolean orderedKeys)  {
         if (orderedKeys) {
-            TreeMap<String, Integer> sorted = new TreeMap<>(); 
-            sorted.addAll(map);
+            TreeMap<String, Object> sorted = new TreeMap<>(); 
+            sorted.putAll(this.map);
             return sorted.entrySet();
         } else {
             return this.entrySet();
