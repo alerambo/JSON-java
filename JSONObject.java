@@ -2540,7 +2540,7 @@ public class JSONObject {
                 }
             } else if (length != 0) {
                 final int newindent = indent + indentFactor;
-                for (final Entry<String,?> entry : this.entrySet()) {
+                for (final Entry<String,?> entry : this.entrySet(keysOdered)) {
                     if (commanate) {
                         writer.write(',');
                     }
