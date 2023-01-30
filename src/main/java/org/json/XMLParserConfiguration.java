@@ -42,6 +42,12 @@ public class XMLParserConfiguration {
      * <code>null</code>(<code>true</code>)
      */
     private boolean convertNilAttributeToNull;
+    
+    /** The prefix of the key in a JSON Object that indicates an attribute name of XML Document.
+     * If prefix is empty or null, all xml attributes will transormed as subelements.
+     *
+     */
+    private String keyAttributePrefix;
 
     /**
      * This will allow type conversion for values in XML if xsi:type attribute is defined
@@ -61,6 +67,7 @@ public class XMLParserConfiguration {
     public XMLParserConfiguration () {
         this.keepStrings = false;
         this.cDataTagName = "content";
+        this.keyAttributePrefix = "";
         this.convertNilAttributeToNull = false;
         this.xsiTypeMap = Collections.emptyMap();
         this.forceList = Collections.emptySet();
@@ -138,15 +145,18 @@ public class XMLParserConfiguration {
      *      to use that value as the JSONObject key name to process as CDATA.
      * @param convertNilAttributeToNull <code>true</code> to parse values with attribute xsi:nil="true" as null.
      *                                  <code>false</code> to parse values with attribute xsi:nil="true" as {"xsi:nil":true}.
+     * @param keyAttributePrefix <code>null</code> to convert all attributes to sub-elements. Any other value set the prefix
+     *                          of the key in a JSON Object that indicates an attribute name of XML Document.
      * @param xsiTypeMap  <code>new HashMap<String, XMLXsiTypeConverter<?>>()</code> to parse values with attribute
      *                   xsi:type="integer" as integer,  xsi:type="string" as string
      * @param forceList  <code>new HashSet<String>()</code> to parse the provided tags' values as arrays 
      */
     private XMLParserConfiguration (final boolean keepStrings, final String cDataTagName,
-            final boolean convertNilAttributeToNull, final Map<String, XMLXsiTypeConverter<?>> xsiTypeMap, final Set<String> forceList ) {
+            final boolean convertNilAttributeToNull, String keyAttributePrefix, final Map<String, XMLXsiTypeConverter<?>> xsiTypeMap, final Set<String> forceList ) {
         this.keepStrings = keepStrings;
         this.cDataTagName = cDataTagName;
         this.convertNilAttributeToNull = convertNilAttributeToNull;
+        this.keyAttributePrefix = keyAttributePrefix;
         this.xsiTypeMap = Collections.unmodifiableMap(xsiTypeMap);
         this.forceList = Collections.unmodifiableSet(forceList);
     }
@@ -165,6 +175,7 @@ public class XMLParserConfiguration {
                 this.keepStrings,
                 this.cDataTagName,
                 this.convertNilAttributeToNull,
+                this.keyAttributePrefix,
                 this.xsiTypeMap,
                 this.forceList
         );
@@ -219,6 +230,31 @@ public class XMLParserConfiguration {
     public XMLParserConfiguration withcDataTagName(final String newVal) {
         XMLParserConfiguration newConfig = this.clone();
         newConfig.cDataTagName = newVal;
+        return newConfig;
+    }
+
+    /**
+     * The prefix of the key in a JSON Object that indicates an attribute name of XML Document.
+     * if prefix is empty or null, all xml attributes will transormed as subelements.
+     *
+     * @return The <code>keyAttributePrefix</code> configuration value.
+     */
+    public String getkeyAttributePrefix() {
+        return this.keyAttributePrefix;
+    }
+
+    /**
+     * The prefix of the key in a JSON Object that indicates an attribute name of XML Document.
+     * If prefix is empty or null, all xml attributes will transormed as subelements.
+     *
+     * @param newVal
+     *      new value to use for the <code>keyAttributePrefix</code> configuration option.
+     *
+     * @return The existing configuration will not be modified. A new configuration is returned.
+     */
+    public XMLParserConfiguration withkeyAttributePrefix(final String newVal) {
+        XMLParserConfiguration newConfig = this.clone();
+        newConfig.keyAttributePrefix = newVal;
         return newConfig;
     }
 

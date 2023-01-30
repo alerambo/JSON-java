@@ -1247,6 +1247,27 @@ public class XMLTest {
             fail("file writer error: " +e.getMessage());
         }
     }
+
+    @Test
+    public void testJSONtoXMLwithAttributesProduceSameJSON() {
+        String expectedJsonString = "{\"outer\":{\"@id\":\"first\",\"inner2\":\"\",\"inner\":{\"@uid\":\"second\"}}}";
+        JSONObject expectedJson = new JSONObject(expectedJsonString);
+        XMLParserConfiguration configuration = XMLParserConfiguration.ORIGINAL.withkeyAttributePrefix("@");
+        String actual = XML.toString(expectedJson, null, configuration);
+        JSONObject actualJson = XML.toJSONObject(actual, configuration);
+        // different json-objects in memory
+        assertNotEquals(actualJson, expectedJson);
+        Util.compareActualVsExpectedJsonObjects(actualJson,expectedJson);
+    }
+
+    @Test
+    public void testXMLwithAttributesToJSONproduceSameXML() {
+        XMLParserConfiguration configuration = XMLParserConfiguration.ORIGINAL.withkeyAttributePrefix("@");
+        String expectedXMLString = "<parent id=\"first\"><outer id=\"second\"><inner id=\"third\"/></outer></parent>";
+        JSONObject actualJson = XML.toJSONObject(expectedXMLString, configuration);
+        String actualXML = XML.toString(actualJson, null, configuration);
+        assertEquals(actualXML, expectedXMLString);
+    }
 }
 
 

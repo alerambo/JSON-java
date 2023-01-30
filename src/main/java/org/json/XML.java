@@ -328,6 +328,10 @@ public class XML {
                 // attribute = value
                 if (token instanceof String) {
                     string = (String) token;
+                    String attributePrefix = config.getkeyAttributePrefix();
+                    if ( attributePrefix == null) {
+                        attributePrefix = "";
+                    }
                     token = x.nextToken();
                     if (token == EQ) {
                         token = x.nextToken();
@@ -343,14 +347,14 @@ public class XML {
                                 && TYPE_ATTR.equals(string)) {
                             xmlXsiTypeConverter = config.getXsiTypeMap().get(token);
                         } else if (!nilAttributeFound) {
-                            jsonObject.accumulate(string,
+                            jsonObject.accumulate(attributePrefix + string,
                                     config.isKeepStrings()
                                             ? ((String) token)
                                             : stringToValue((String) token));
                         }
                         token = null;
                     } else {
-                        jsonObject.accumulate(string, "");
+                        jsonObject.accumulate(attributePrefix + string, "");
                     }
 
 
@@ -778,7 +782,7 @@ public class XML {
         JSONArray ja;
         JSONObject jo;
         String string;
-
+        final String keyAttributePrefix = config.getkeyAttributePrefix();
         if (object instanceof JSONObject) {
 
             // Emit <tagName>
@@ -786,10 +790,49 @@ public class XML {
                 sb.append(indent(indent));
                 sb.append('<');
                 sb.append(tagName);
-                sb.append('>');
-                if(indentFactor > 0){
-                    sb.append("\n");
-                    indent += indentFactor;
+                jo = (JSONObject) object;
+                boolean closeCurrentObject = false;
+                if (keyAttributePrefix != null && keyAttributePrefix.length() > 0) {
+                    int attributeNumbers = 0;
+                    for (final String key : jo.keySet()) {
+                        if (key.startsWith(keyAttributePrefix)) {
+                            attributeNumbers = attributeNumbers + 1;
+                            sb.append(' ');
+                            sb.append(key.substring(1));
+                            sb.append('=');
+                            Object value = jo.opt(key);
+                            if (value instanceof String || value instanceof Number || value instanceof JSONString) {
+                                sb.append('"');
+                                if (value instanceof JSONString) {
+                                    sb.append(escape( ((JSONString)value).toJSONString() ));
+                                } else {
+                                    sb.append(escape(value.toString()));
+                                }
+                                sb.append('"');
+                            } else {
+                                throw new JSONException("'" + key
+                                        + "' attribute contains a value not admitted.");
+                            }
+                        }
+                    }
+                    if (jo.length() == attributeNumbers) {
+                        // All children are attributes
+                        closeCurrentObject = true;
+                    }
+                }
+                if (closeCurrentObject) {
+                    sb.append('/');
+                    sb.append('>');
+                    if(indentFactor > 0){
+                        sb.append("\n");
+                    }
+                    return sb.toString();
+                } else {
+                    sb.append('>');
+                    if (indentFactor > 0) {
+                        sb.append("\n");
+                        indent += indentFactor;
+                    }
                 }
             }
 
@@ -797,6 +840,10 @@ public class XML {
             // don't use the new entrySet accessor to maintain Android Support
             jo = (JSONObject) object;
             for (final String key : jo.keySet()) {
+                if (keyAttributePrefix != null && keyAttributePrefix.length() > 0 && key.startsWith(keyAttributePrefix)) {
+                    //this couple key-value represents an attribute
+                    continue;
+                }
                 Object value = jo.opt(key);
                 if (value == null) {
                     value = "";
