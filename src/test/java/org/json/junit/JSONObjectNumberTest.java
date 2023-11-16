@@ -23,7 +23,10 @@ public class JSONObjectNumberTest {
     @Parameters(name = "{index}: {0}")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-            {"{value:50}", 1},
+            {"{value:0050}", 1},
+            {"{value:0050.0000}", 1},
+            {"{value:-0050}", -1},
+            {"{value:-0050.0000}", -1},
             {"{value:50.0}", 1},
             {"{value:5e1}", 1},
             {"{value:5E1}", 1},
@@ -32,6 +35,7 @@ public class JSONObjectNumberTest {
             {"{value:-50}", -1},
             {"{value:-50.0}", -1},
             {"{value:-5e1}", -1},
+            {"{value:-0005e1}", -1},
             {"{value:-5E1}", -1},
             {"{value:-5e1}", -1},
             {"{value:'-50'}", -1}
@@ -110,8 +114,18 @@ public class JSONObjectNumberTest {
     }
 
     @Test
+    public void testOptFloatObject() {
+        assertEquals((Float) value.floatValue(), object.optFloatObject("value"), 0.0f);
+    }
+
+    @Test
     public void testOptDouble() {
         assertEquals(value.doubleValue(), object.optDouble("value"), 0.0d);
+    }
+
+    @Test
+    public void testOptDoubleObject() {
+        assertEquals((Double) value.doubleValue(), object.optDoubleObject("value"), 0.0d);
     }
 
     @Test
@@ -120,7 +134,17 @@ public class JSONObjectNumberTest {
     }
 
     @Test
+    public void testOptIntegerObject() {
+        assertEquals((Integer) value.intValue(), object.optIntegerObject("value"));
+    }
+
+    @Test
     public void testOptLong() {
         assertEquals(value.longValue(), object.optLong("value"));
+    }
+
+    @Test
+    public void testOptLongObject() {
+        assertEquals((Long) value.longValue(), object.optLongObject("value"));
     }
 }

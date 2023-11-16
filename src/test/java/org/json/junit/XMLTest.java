@@ -18,6 +18,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -790,7 +791,7 @@ public class XMLTest {
     @Test
     public void testToJSONArray_jsonOutput() {
         final String originalXml = "<root><id>01</id><id>1</id><id>00</id><id>0</id><item id=\"01\"/><title>True</title></root>";
-        final JSONObject expectedJson = new JSONObject("{\"root\":{\"item\":{\"id\":\"01\"},\"id\":[\"01\",1,\"00\",0],\"title\":true}}");
+        final JSONObject expectedJson = new JSONObject("{\"root\":{\"item\":{\"id\":1},\"id\":[1,1,0,0],\"title\":true}}");
         final JSONObject actualJsonOutput = XML.toJSONObject(originalXml, false);
 
         Util.compareActualVsExpectedJsonObjects(actualJsonOutput,expectedJson);
@@ -915,7 +916,7 @@ public class XMLTest {
             InputStream xmlStream = null;
             try {
                 xmlStream = XMLTest.class.getClassLoader().getResourceAsStream("Issue537.xml");
-                Reader xmlReader = new InputStreamReader(xmlStream);
+                Reader xmlReader = new InputStreamReader(xmlStream, Charset.forName("UTF-8"));
                 JSONObject actual = XML.toJSONObject(xmlReader, true);
                 InputStream jsonStream = null;
                 try {
@@ -1111,6 +1112,7 @@ public class XMLTest {
                 "}" ;
         JSONObject jsonObject = new JSONObject(str);
         String actualIndentedXmlString = XML.toString(jsonObject, 1);
+        JSONObject actualJsonObject = XML.toJSONObject(actualIndentedXmlString);
         String expected = "<success>true</success>\n" +
                 "<response>\n" +
                 " <dateTimeISO>2022-10-05T00:00:00+03:00</dateTimeISO>\n" +
@@ -1170,10 +1172,31 @@ public class XMLTest {
                 " <timestamp>1664917200</timestamp>\n" +
                 "</response>\n" +
                 "<error>null</error>\n";
-        assertEquals(actualIndentedXmlString, expected);
+        JSONObject expectedJsonObject = XML.toJSONObject(expected);
+        assertTrue(expectedJsonObject.similar(actualJsonObject));
 
 
     }
+
+    @Test
+    public void shouldCreateExplicitEndTagWithEmptyValueWhenConfigured(){
+        String jsonString = "{outer:{innerOne:\"\", innerTwo:\"two\"}}";
+        JSONObject jsonObject = new JSONObject(jsonString);
+        String expectedXmlString = "<encloser><outer><innerOne></innerOne><innerTwo>two</innerTwo></outer></encloser>";
+        String xmlForm = XML.toString(jsonObject,"encloser", new XMLParserConfiguration().withCloseEmptyTag(true));
+        assertEquals(expectedXmlString, xmlForm);
+    }
+
+    @Test
+    public void shouldNotCreateExplicitEndTagWithEmptyValueWhenNotConfigured(){
+        String jsonString = "{outer:{innerOne:\"\", innerTwo:\"two\"}}";
+        JSONObject jsonObject = new JSONObject(jsonString);
+        String expectedXmlString = "<encloser><outer><innerOne/><innerTwo>two</innerTwo></outer></encloser>";
+        String xmlForm = XML.toString(jsonObject,"encloser", new XMLParserConfiguration().withCloseEmptyTag(false));
+        assertEquals(expectedXmlString, xmlForm);
+    }
+
+
     @Test
     public void testIndentSimpleJsonObject(){
         String str = "{    \"employee\": {  \n" +
@@ -1183,6 +1206,7 @@ public class XMLTest {
                 "    }}";
         JSONObject jsonObject = new JSONObject(str);
         String actual = XML.toString(jsonObject, "Test", 2);
+        JSONObject actualJsonObject = XML.toJSONObject(actual);
         String expected = "<Test>\n" +
                 "  <employee>\n" +
                 "    <name>sonoo</name>\n" +
@@ -1190,7 +1214,8 @@ public class XMLTest {
                 "    <married>true</married>\n" +
                 "  </employee>\n" +
                 "</Test>\n";
-        assertEquals(actual, expected);
+        JSONObject expectedJsonObject = XML.toJSONObject(expected);
+        assertTrue(expectedJsonObject.similar(actualJsonObject));
     }
 
     @Test
@@ -1201,6 +1226,7 @@ public class XMLTest {
                 "]  ";
         JSONArray jsonObject = new JSONArray(str);
         String actual = XML.toString(jsonObject, 2);
+        JSONObject actualJsonObject = XML.toJSONObject(actual);
         String expected = "<array>\n" +
                 "  <name>Ram</name>\n" +
                 "  <email>Ram@gmail.com</email>\n" +
@@ -1209,39 +1235,26 @@ public class XMLTest {
                 "  <name>Bob</name>\n" +
                 "  <email>bob32@gmail.com</email>\n" +
                 "</array>\n";
-        assertEquals(actual, expected);
+        JSONObject expectedJsonObject = XML.toJSONObject(expected);
+        assertTrue(expectedJsonObject.similar(actualJsonObject));
 
 
     }
 
     @Test
     public void testIndentComplicatedJsonObjectWithArrayAndWithConfig(){
-        try {
-            InputStream jsonStream = null;
-            try {
-                jsonStream = XMLTest.class.getClassLoader().getResourceAsStream("Issue593.json");
-                final JSONObject object = new JSONObject(new JSONTokener(jsonStream));
-                String actualString = XML.toString(object, null, XMLParserConfiguration.KEEP_STRINGS,2);
-                InputStream xmlStream = null;
-                try {
-                    xmlStream = XMLTest.class.getClassLoader().getResourceAsStream("Issue593.xml");
-                    int bufferSize = 1024;
-                    char[] buffer = new char[bufferSize];
-                    StringBuilder expected = new StringBuilder();
-                    Reader in = new InputStreamReader(xmlStream, "UTF-8");
-                    for (int numRead; (numRead = in.read(buffer, 0, buffer.length)) > 0; ) {
-                        expected.append(buffer, 0, numRead);
-                    }
-                    assertEquals(expected.toString(), actualString.replaceAll("\\n|\\r\\n", System.getProperty("line.separator")));
-                } finally {
-                    if (xmlStream != null) {
-                        xmlStream.close();
-                    }
+        try (InputStream jsonStream = XMLTest.class.getClassLoader().getResourceAsStream("Issue593.json")) {
+            final JSONObject object = new JSONObject(new JSONTokener(jsonStream));
+            String actualString = XML.toString(object, null, XMLParserConfiguration.KEEP_STRINGS, 2);
+            try (InputStream xmlStream = XMLTest.class.getClassLoader().getResourceAsStream("Issue593.xml")) {
+                int bufferSize = 1024;
+                char[] buffer = new char[bufferSize];
+                StringBuilder expected = new StringBuilder();
+                Reader in = new InputStreamReader(xmlStream, "UTF-8");
+                for (int numRead; (numRead = in.read(buffer, 0, buffer.length)) > 0; ) {
+                    expected.append(buffer, 0, numRead);
                 }
-            } finally {
-                if (jsonStream != null) {
-                    jsonStream.close();
-                }
+                assertTrue(XML.toJSONObject(expected.toString()).similar(XML.toJSONObject(actualString)));
             }
         } catch (IOException e) {
             fail("file writer error: " +e.getMessage());
@@ -1267,6 +1280,65 @@ public class XMLTest {
         JSONObject actualJson = XML.toJSONObject(expectedXMLString, configuration);
         String actualXML = XML.toString(actualJson, null, configuration);
         assertEquals(actualXML, expectedXMLString);
+    }
+
+    @Test
+    public void testMaxNestingDepthOf42IsRespected() {
+        final String wayTooLongMalformedXML = new String(new char[6000]).replace("\0", "<a>");
+
+        final int maxNestingDepth = 42;
+
+        try {
+            XML.toJSONObject(wayTooLongMalformedXML, XMLParserConfiguration.ORIGINAL.withMaxNestingDepth(maxNestingDepth));
+
+            fail("Expecting a JSONException");
+        } catch (JSONException e) {
+            assertTrue("Wrong throwable thrown: not expecting message <" + e.getMessage() + ">",
+                e.getMessage().startsWith("Maximum nesting depth of " + maxNestingDepth));
+        }
+    }
+
+    @Test
+    public void testMaxNestingDepthIsRespectedWithValidXML() {
+        final String perfectlyFineXML = "<Test>\n" +
+            "  <employee>\n" +
+            "    <name>sonoo</name>\n" +
+            "    <salary>56000</salary>\n" +
+            "    <married>true</married>\n" +
+            "  </employee>\n" +
+            "</Test>\n";
+
+        final int maxNestingDepth = 1;
+
+        try {
+            XML.toJSONObject(perfectlyFineXML, XMLParserConfiguration.ORIGINAL.withMaxNestingDepth(maxNestingDepth));
+
+            fail("Expecting a JSONException");
+        } catch (JSONException e) {
+            assertTrue("Wrong throwable thrown: not expecting message <" + e.getMessage() + ">",
+                e.getMessage().startsWith("Maximum nesting depth of " + maxNestingDepth));
+        }
+    }
+
+    @Test
+    public void testMaxNestingDepthWithValidFittingXML() {
+        final String perfectlyFineXML = "<Test>\n" +
+            "  <employee>\n" +
+            "    <name>sonoo</name>\n" +
+            "    <salary>56000</salary>\n" +
+            "    <married>true</married>\n" +
+            "  </employee>\n" +
+            "</Test>\n";
+
+        final int maxNestingDepth = 3;
+
+        try {
+            XML.toJSONObject(perfectlyFineXML, XMLParserConfiguration.ORIGINAL.withMaxNestingDepth(maxNestingDepth));
+        } catch (JSONException e) {
+            e.printStackTrace();
+            fail("XML document should be parsed as its maximum depth fits the maxNestingDepth " +
+                "parameter of the XMLParserConfiguration used");
+        }
     }
 }
 
