@@ -2683,9 +2683,7 @@ public class JSONObject {
         // and we don't want to oversize the initial capacity
         int initialSize = map.size() * 6;
         Writer w = new StringBuilderWriter(Math.max(initialSize, 16));
-        synchronized (w.getBuffer()) {
-            return this.write(w, indentFactor, 0, keysOdered).toString();
-        }
+        return this.write(w, indentFactor, 0, keysOdered).toString();
     }
 
     /**

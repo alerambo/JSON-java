@@ -1735,9 +1735,7 @@ public class JSONArray implements Iterable<Object> {
         // We don't want to oversize the initial capacity
         int initialSize = myArrayList.size() * 2;
         Writer sw = new StringBuilderWriter(Math.max(initialSize, 16));
-        synchronized (sw.getBuffer()) {
-            return this.write(sw, indentFactor, 0, keysOdered).toString();
-        }
+        return this.write(sw, indentFactor, 0, keysOdered).toString();
     }
 
     /**
