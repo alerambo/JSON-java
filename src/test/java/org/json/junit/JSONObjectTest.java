@@ -4,7 +4,6 @@ package org.json.junit;
 Public Domain.
 */
 
-import static java.lang.Double.NaN;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -32,8 +31,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONPointerException;
+import org.json.JSONParserConfiguration;
 import org.json.JSONString;
 import org.json.JSONTokener;
+import org.json.ParserConfiguration;
 import org.json.XML;
 import org.json.junit.data.BrokenToString;
 import org.json.junit.data.ExceptionalBean;
@@ -784,7 +785,7 @@ public class JSONObjectTest {
         jsonObject.accumulate("myArray", -23.45e7);
         // include an unsupported object for coverage
         try {
-            jsonObject.accumulate("myArray", NaN);
+            jsonObject.accumulate("myArray", Double.NaN);
             fail("Expected exception");
         } catch (JSONException ignored) {}
 
@@ -816,7 +817,7 @@ public class JSONObjectTest {
         jsonObject.append("myArray", -23.45e7);
         // include an unsupported object for coverage
         try {
-            jsonObject.append("myArray", NaN);
+            jsonObject.append("myArray", Double.NaN);
             fail("Expected exception");
         } catch (JSONException ignored) {}
 
@@ -841,7 +842,7 @@ public class JSONObjectTest {
     public void jsonObjectDoubleToString() {
         String [] expectedStrs = {"1", "1", "-23.4", "-2.345E68", "null", "null" };
         Double [] doubles = { 1.0, 00001.00000, -23.4, -23.45e67, 
-                NaN, Double.NEGATIVE_INFINITY };
+                Double.NaN, Double.NEGATIVE_INFINITY };
         for (int i = 0; i < expectedStrs.length; ++i) {
             String actualStr = JSONObject.doubleToString(doubles[i]);
             assertTrue("value expected ["+expectedStrs[i]+
@@ -896,11 +897,11 @@ public class JSONObjectTest {
         assertTrue("opt doubleKey should be double", 
                 jsonObject.optDouble("doubleKey") == -23.45e7);
         assertTrue("opt doubleKey with Default should be double", 
-                jsonObject.optDouble("doubleStrKey", NaN) == 1);
+                jsonObject.optDouble("doubleStrKey", Double.NaN) == 1);
         assertTrue("opt doubleKey should be Double",
                 Double.valueOf(-23.45e7).equals(jsonObject.optDoubleObject("doubleKey")));
         assertTrue("opt doubleKey with Default should be Double",
-                Double.valueOf(1).equals(jsonObject.optDoubleObject("doubleStrKey", NaN)));
+                Double.valueOf(1).equals(jsonObject.optDoubleObject("doubleStrKey", Double.NaN)));
         assertTrue("opt negZeroKey should be a Double", 
                 jsonObject.opt("negZeroKey") instanceof Double);
         assertTrue("get negZeroKey should be a Double", 
@@ -1066,21 +1067,12 @@ public class JSONObjectTest {
                 "\"tooManyZeros\":00,"+
                 "\"negativeInfinite\":-Infinity,"+
                 "\"negativeNaN\":-NaN,"+
-                "\"negativeNaNWithLeadingZeros\":-00NaN,"+
                 "\"negativeFraction\":-.01,"+
                 "\"tooManyZerosFraction\":00.001,"+
                 "\"negativeHexFloat\":-0x1.fffp1,"+
                 "\"hexFloat\":0x1.0P-1074,"+
                 "\"floatIdentifier\":0.1f,"+
-                "\"doubleIdentifier\":0.1d,"+
-                "\"doubleIdentifierWithMultipleLeadingZerosBeforeDecimal\":0000000.1d,"+
-                "\"negativeDoubleIdentifierWithMultipleLeadingZerosBeforeDecimal\":-0000000.1d,"+
-                "\"doubleIdentifierWithMultipleLeadingZerosAfterDecimal\":0000000.0001d,"+
-                "\"negativeDoubleIdentifierWithMultipleLeadingZerosAfterDecimal\":-0000000.0001d,"+
-                "\"integerWithLeadingZeros\":000900,"+
-                "\"integerWithAllZeros\":00000,"+
-                "\"compositeWithLeadingZeros\":00800.90d,"+
-                "\"decimalPositiveWithoutNumberBeforeDecimalPoint\":.90,"+
+                "\"doubleIdentifier\":0.1d"+
             "}";
         JSONObject jsonObject = new JSONObject(str);
         Object obj;
@@ -1090,22 +1082,15 @@ public class JSONObjectTest {
         assertTrue("hexNumber currently evaluates to string",
                 obj.equals("-0x123"));
         assertTrue( "tooManyZeros currently evaluates to string",
-                jsonObject.get( "tooManyZeros" ).equals(0));
+                jsonObject.get( "tooManyZeros" ).equals("00"));
         obj = jsonObject.get("negativeInfinite");
         assertTrue( "negativeInfinite currently evaluates to string",
                 obj.equals("-Infinity"));
         obj = jsonObject.get("negativeNaN");
         assertTrue( "negativeNaN currently evaluates to string",
                 obj.equals("-NaN"));
-        obj = jsonObject.get("negativeNaNWithLeadingZeros");
-        assertTrue( "negativeNaNWithLeadingZeros currently evaluates to string",
-                obj.equals("-00NaN"));
         assertTrue( "negativeFraction currently evaluates to double -0.01",
                 jsonObject.get( "negativeFraction" ).equals(BigDecimal.valueOf(-0.01)));
-        assertTrue( "tooManyZerosFraction currently evaluates to double 0.001",
-                jsonObject.get( "tooManyZerosFraction" ).equals(BigDecimal.valueOf(0.001)));
-        assertTrue( "tooManyZerosFraction currently evaluates to double 0.001",
-                jsonObject.getLong( "tooManyZerosFraction" )==0);
         assertTrue( "tooManyZerosFraction currently evaluates to double 0.001",
                 jsonObject.optLong( "tooManyZerosFraction" )==0);
         assertTrue( "negativeHexFloat currently evaluates to double -3.99951171875",
@@ -1116,53 +1101,6 @@ public class JSONObjectTest {
                 jsonObject.get("floatIdentifier").equals(Double.valueOf(0.1)));
         assertTrue("doubleIdentifier currently evaluates to double 0.1",
                 jsonObject.get("doubleIdentifier").equals(Double.valueOf(0.1)));
-        assertTrue("doubleIdentifierWithMultipleLeadingZerosBeforeDecimal currently evaluates to double 0.1",
-                jsonObject.get("doubleIdentifierWithMultipleLeadingZerosBeforeDecimal").equals(Double.valueOf(0.1)));
-        assertTrue("negativeDoubleIdentifierWithMultipleLeadingZerosBeforeDecimal currently evaluates to double -0.1",
-                jsonObject.get("negativeDoubleIdentifierWithMultipleLeadingZerosBeforeDecimal").equals(Double.valueOf(-0.1)));
-        assertTrue("doubleIdentifierWithMultipleLeadingZerosAfterDecimal currently evaluates to double 0.0001",
-                jsonObject.get("doubleIdentifierWithMultipleLeadingZerosAfterDecimal").equals(Double.valueOf(0.0001)));
-        assertTrue("doubleIdentifierWithMultipleLeadingZerosAfterDecimal currently evaluates to double 0.0001",
-                jsonObject.get("doubleIdentifierWithMultipleLeadingZerosAfterDecimal").equals(Double.valueOf(0.0001)));
-        assertTrue("negativeDoubleIdentifierWithMultipleLeadingZerosAfterDecimal currently evaluates to double -0.0001",
-                jsonObject.get("negativeDoubleIdentifierWithMultipleLeadingZerosAfterDecimal").equals(Double.valueOf(-0.0001)));
-        assertTrue("Integer does not evaluate to 900",
-                jsonObject.get("integerWithLeadingZeros").equals(900));
-        assertTrue("Integer does not evaluate to 900",
-                jsonObject.getInt("integerWithLeadingZeros")==900);
-        assertTrue("Integer does not evaluate to 900",
-                jsonObject.optInt("integerWithLeadingZeros")==900);
-        assertTrue("Integer does not evaluate to 0",
-                jsonObject.get("integerWithAllZeros").equals(0));
-        assertTrue("Integer does not evaluate to 0",
-                jsonObject.getInt("integerWithAllZeros")==0);
-        assertTrue("Integer does not evaluate to 0",
-                jsonObject.optInt("integerWithAllZeros")==0);
-        assertTrue("Double does not evaluate to 800.90",
-                jsonObject.get("compositeWithLeadingZeros").equals(800.90));
-        assertTrue("Double does not evaluate to 800.90",
-                jsonObject.getDouble("compositeWithLeadingZeros")==800.9d);
-        assertTrue("Integer does not evaluate to 800",
-                jsonObject.optInt("compositeWithLeadingZeros")==800);
-        assertTrue("Long does not evaluate to 800.90",
-                jsonObject.getLong("compositeWithLeadingZeros")==800);
-        assertTrue("Long does not evaluate to 800.90",
-                jsonObject.optLong("compositeWithLeadingZeros")==800);
-        assertEquals("Get long of decimalPositiveWithoutNumberBeforeDecimalPoint does not match",
-                0.9d,jsonObject.getDouble("decimalPositiveWithoutNumberBeforeDecimalPoint"),  0.0d);
-        assertEquals("Get long of decimalPositiveWithoutNumberBeforeDecimalPoint does not match",
-                0.9d,jsonObject.optDouble("decimalPositiveWithoutNumberBeforeDecimalPoint"),  0.0d);
-        assertEquals("Get long of decimalPositiveWithoutNumberBeforeDecimalPoint does not match",
-                0.0d,jsonObject.optLong("decimalPositiveWithoutNumberBeforeDecimalPoint"),  0.0d);
-
-        assertEquals("Get long of doubleIdentifierWithMultipleLeadingZerosAfterDecimal does not match",
-                0.0001d,jsonObject.getDouble("doubleIdentifierWithMultipleLeadingZerosAfterDecimal"),  0.0d);
-        assertEquals("Get long of doubleIdentifierWithMultipleLeadingZerosAfterDecimal does not match",
-                0.0001d,jsonObject.optDouble("doubleIdentifierWithMultipleLeadingZerosAfterDecimal"),  0.0d);
-        assertEquals("Get long of doubleIdentifierWithMultipleLeadingZerosAfterDecimal does not match",
-                0.0d, jsonObject.getLong("doubleIdentifierWithMultipleLeadingZerosAfterDecimal") , 0.0d);
-        assertEquals("Get long of doubleIdentifierWithMultipleLeadingZerosAfterDecimal does not match",
-                0.0d,jsonObject.optLong("doubleIdentifierWithMultipleLeadingZerosAfterDecimal"),  0.0d);
         Util.checkJSONObjectMaps(jsonObject);
     }
 
@@ -2255,6 +2193,60 @@ public class JSONObjectTest {
         }
     }
 
+    @Test
+    public void jsonObjectParseControlCharacterEOFAssertExceptionMessage(){
+        char c = '\0';
+        final String source = "{\"key\":\"" + c + "\"}";
+        try {
+            JSONObject jo = new JSONObject(source);
+            fail("JSONException should be thrown");
+        } catch (JSONException ex) {
+            assertEquals("Unterminated string. " + "Character with int code 0" +
+                    " is not allowed within a quoted string. at 8 [character 9 line 1]", ex.getMessage());
+        }
+    }
+
+    @Test
+    public void jsonObjectParseControlCharacterNewLineAssertExceptionMessage(){
+        char[] chars = {'\n', '\r'};
+        for( char c : chars) {
+            final String source = "{\"key\":\"" + c + "\"}";
+            try {
+                JSONObject jo = new JSONObject(source);
+                fail("JSONException should be thrown");
+            } catch (JSONException ex) {
+                assertEquals("Unterminated string. " + "Character with int code " + (int) c +
+                        " is not allowed within a quoted string. at 9 [character 0 line 2]", ex.getMessage());
+            }
+        }
+    }
+
+    @Test
+    public void jsonObjectParseUTF8EncodingAssertExceptionMessage(){
+        String c = "\\u123x";
+        final String source = "{\"key\":\"" + c + "\"}";
+        try {
+            JSONObject jo = new JSONObject(source);
+            fail("JSONException should be thrown");
+        } catch (JSONException ex) {
+            assertEquals("Illegal escape. \\u must be followed by a 4 digit hexadecimal number. " +
+                    "\\123x is not valid. at 14 [character 15 line 1]", ex.getMessage());
+        }
+    }
+
+    @Test
+    public void jsonObjectParseIllegalEscapeAssertExceptionMessage(){
+        String c = "\\x";
+        final String source = "{\"key\":\"" + c + "\"}";
+        try {
+            JSONObject jo = new JSONObject(source);
+            fail("JSONException should be thrown");
+        } catch (JSONException ex) {
+            assertEquals("Illegal escape. Escape sequence  " + c + " is not valid." +
+                    " at 10 [character 11 line 1]", ex.getMessage());
+        }
+    }
+
     /**
      * Explore how JSONObject handles parsing errors.
      */
@@ -2396,7 +2388,7 @@ public class JSONObjectTest {
         }
         try {
             // test validity of invalid double 
-            JSONObject.testValidity(NaN);
+            JSONObject.testValidity(Double.NaN);
             fail("Expected an exception");
         } catch (JSONException e) { 
             assertTrue("", true);
@@ -3718,4 +3710,138 @@ public class JSONObjectTest {
             assertThrows(JSONException.class, () -> new JSONObject(bean));
         }
     }
+
+    @Test(expected = JSONException.class)
+    public void issue743SerializationMap() {
+      HashMap<String, Object> map = new HashMap<>();
+      map.put("t", map);
+      JSONObject object = new JSONObject(map);
+      String jsonString = object.toString();
+    }
+
+    @Test(expected = JSONException.class)
+    public void testCircularReferenceMultipleLevel() {
+      HashMap<String, Object> inside = new HashMap<>();
+      HashMap<String, Object> jsonObject = new HashMap<>();
+      inside.put("inside", jsonObject);
+      jsonObject.put("test", inside);
+      new JSONObject(jsonObject);
+    }
+
+    @Test
+    public void issue743SerializationMapWith512Objects() {
+        HashMap<String, Object> map  = buildNestedMap(ParserConfiguration.DEFAULT_MAXIMUM_NESTING_DEPTH);
+        JSONObject object = new JSONObject(map);
+        String jsonString = object.toString();
+    }
+
+    @Test
+    public void issue743SerializationMapWith1000Objects() {
+      HashMap<String, Object> map  = buildNestedMap(1000);
+      JSONParserConfiguration parserConfiguration = new JSONParserConfiguration().withMaxNestingDepth(1000);
+      JSONObject object = new JSONObject(map, parserConfiguration);
+      String jsonString = object.toString();
+    }
+
+    @Test(expected = JSONException.class)
+    public void issue743SerializationMapWith1001Objects() {
+        HashMap<String, Object> map  = buildNestedMap(1001);
+        JSONObject object = new JSONObject(map);
+        String jsonString = object.toString();
+    }
+
+    @Test(expected = JSONException.class)
+    public void testCircleReferenceFirstLevel() {
+        Map<Object, Object> jsonObject = new HashMap<>();
+
+        jsonObject.put("test", jsonObject);
+
+        new JSONObject(jsonObject, new JSONParserConfiguration());
+    }
+
+    @Test(expected = StackOverflowError.class)
+    public void testCircleReferenceMultiplyLevel_notConfigured_expectedStackOverflow() {
+        Map<Object, Object> inside = new HashMap<>();
+
+        Map<Object, Object> jsonObject = new HashMap<>();
+        inside.put("test", jsonObject);
+        jsonObject.put("test", inside);
+
+        new JSONObject(jsonObject, new JSONParserConfiguration().withMaxNestingDepth(99999));
+    }
+
+    @Test(expected = JSONException.class)
+    public void testCircleReferenceMultiplyLevel_configured_expectedJSONException() {
+        Map<Object, Object> inside = new HashMap<>();
+
+        Map<Object, Object> jsonObject = new HashMap<>();
+        inside.put("test", jsonObject);
+        jsonObject.put("test", inside);
+
+        new JSONObject(jsonObject, new JSONParserConfiguration());
+    }
+
+    @Test
+    public void testDifferentKeySameInstanceNotACircleReference() {
+        Map<Object, Object> map1 = new HashMap<>();
+        Map<Object, Object> map2 = new HashMap<>();
+
+        map1.put("test1", map2);
+        map1.put("test2", map2);
+
+        new JSONObject(map1);
+    }
+
+    @Test
+    public void clarifyCurrentBehavior() {
+        // Behavior documented in #653 optLong vs getLong inconsistencies
+        // This problem still exists.
+        // Internally, both number_1 and number_2 are stored as strings. This is reasonable since they are parsed as strings.
+        // However, getLong and optLong should return similar results
+        JSONObject json = new JSONObject("{\"number_1\":\"01234\", \"number_2\": \"332211\"}");
+        assertEquals(json.getLong("number_1"), 1234L);
+        assertEquals(json.optLong("number_1"), 0); //THIS VALUE IS NOT RETURNED AS A NUMBER
+        assertEquals(json.getLong("number_2"), 332211L);
+        assertEquals(json.optLong("number_2"), 332211L);
+
+        // Behavior documented in #826 JSONObject parsing 0-led numeric strings as ints
+        // After reverting the code, personId is stored as a string, and the behavior is as expected
+        String personId = "0123";
+        JSONObject j1 = new JSONObject("{personId: " + personId + "}");
+        assertEquals(j1.getString("personId"), "0123");
+
+        // Also #826. Here is input with missing quotes. Because of the leading zero, it should not be parsed as a number.
+        // This example was mentioned in the same ticket
+        // After reverting the code, personId is stored as a string, and the behavior is as expected
+        JSONObject j2 = new JSONObject("{\"personId\":0123}");
+        assertEquals(j2.getString("personId"), "0123");
+
+        // Behavior uncovered while working on the code
+        // All of the values are stored as strings except for hex4, which is stored as a number. This is probably incorrect
+        JSONObject j3 = new JSONObject("{ " +
+                "\"hex1\": \"010e4\", \"hex2\": \"00f0\", \"hex3\": \"0011\", " +
+                "\"hex4\": 00e0, \"hex5\": 00f0, \"hex6\": 0011 }");
+        assertEquals(j3.getString("hex1"), "010e4");
+        assertEquals(j3.getString("hex2"), "00f0");
+        assertEquals(j3.getString("hex3"), "0011");
+        assertEquals(j3.getLong("hex4"), 0, .1);
+        assertEquals(j3.getString("hex5"), "00f0");
+        assertEquals(j3.getString("hex6"), "0011");
+    }
+
+    /**
+     * Method to build nested map of max maxDepth
+     *
+     * @param maxDepth
+     * @return
+     */
+    public static HashMap<String, Object> buildNestedMap(int maxDepth) {
+        if (maxDepth <= 0) {
+            return new HashMap<>();
+        }
+        HashMap<String, Object> nestedMap = new HashMap<>();
+        nestedMap.put("t", buildNestedMap(maxDepth - 1));
+        return nestedMap;
+    }
+
 }

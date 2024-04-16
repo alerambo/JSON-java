@@ -12,6 +12,12 @@ Public Domain.
 public class CookieList {
 
     /**
+     * Constructs a new CookieList object.
+     */
+    public CookieList() {
+    }
+ 
+    /**
      * Convert a cookie list into a JSONObject. A cookie list is a sequence
      * of name/value pairs. The names are separated from the values by '='.
      * The pairs are separated by ';'. The names and the values
@@ -46,19 +52,19 @@ public class CookieList {
      * @throws JSONException if a called function fails
      */
     public static String toString(JSONObject jo) throws JSONException {
-        boolean             b = false;
+        boolean             isEndOfPair = false;
         final StringBuilder sb = new StringBuilder();
         // Don't use the new entrySet API to maintain Android support
         for (final String key : jo.keySet()) {
             final Object value = jo.opt(key);
             if (!JSONObject.NULL.equals(value)) {
-                if (b) {
+                if (isEndOfPair) {
                     sb.append(';');
                 }
                 sb.append(Cookie.escape(key));
                 sb.append("=");
                 sb.append(Cookie.escape(value.toString()));
-                b = true;
+                isEndOfPair = true;
             }
         }
         return sb.toString();
